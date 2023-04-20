@@ -14,8 +14,11 @@ router.put('/users/:id', controller.updateUser);
 // delete user 
 router.delete('/users/:id', controller.deleteUser);
 // get user by mail and password
-router.post('/users/login', controller.loginByMailPassword);
-
+router.post('/login', controller.loginByMailPassword);
+// to logout
+router.post('/logout', controller.logoutUsingCookie);
+// to check ig logged in already -- using cookie
+router.get('/user', controller.checkIfLoggedIn)
 
 // For articles
 // get all articles 

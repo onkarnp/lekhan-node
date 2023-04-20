@@ -5,7 +5,7 @@ const pool = require('../../db')
 const queries = require('./queries')
 const bcrypt = require('bcryptjs');
 const { genSaltSync, hashSync,} = require("bcryptjs");
-
+const jwt = require('jsonwebtoken')
 
 const getAllUsers = (req, res) => {
     pool.query(queries.getAllUsers, (error, results) => {
@@ -24,29 +24,65 @@ const getUserById = (req, res) => {
 
 const loginByMailPassword = async (req, res) => {
     const { usermail, userpass } = req.body;
-    console.log(req.body);
-
-
-    pool.query(queries.checkEmailExists, [usermail], async (error, results) => {
-        console.log(results);
-        let isMatchPassword = await bcrypt.compare(userpass , results.rows[0].userpass); 
-        console.log(isMatchPassword);
-        if (error) throw error;
-        if(!results.rows.length ) {
-
-            return res.json("Email not exists");
-        }
-        if(isMatchPassword){
-            console.log(process.env.TOKEN_KEY);
-            res.status(200).json("Logged in successfully");
-        }
-        else{
-            console.log("wrong password");
-            res.status(200).json("Coudn't login, please check credentials");
-        }    
-    })
-    
+    try{
+        pool.query(queries.checkEmailExists, [usermail], async (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).send({ message : err })
+            }
+            if(!results.rows.length ) {
+                return res.json("User with provided mail doesn't exists");
+            }
+                   
+            let isMatchPassword = await bcrypt.compare(userpass , results.rows[0].userpass); 
+            console.log(isMatchPassword);
+            if(isMatchPassword){
+                //function to generate token would be here 
+                const token = jwt.sign({userid: results.rows[0].userid}, process.env.TOKEN_KEY, {expiresIn: "24h"});
+                res.cookie('jwt', token, {
+                    maxAge: 24 * 60 * 60 * 1000,
+                    httpOnly:true,
+                    secure:true                    
+                })
+                return res.status(200).json("Logged in successfully");
+            }
+            else{
+                console.log("wrong password");
+                return res.status(401).json("Couldn't login, please check credentials");
+            }    
+        })        
+    }
+    catch(error){
+        console.log(error);
+    }  
 }   
+
+
+const checkIfLoggedIn = async (req, res) => {
+    try{
+        const cookie = req.cookies['jwt'];
+        console.log(cookie);
+        const claims = jwt.verify(cookie, process.env.TOKEN_KEY)
+        if(!claims){
+            return res.status(401).send({
+                message: 'Unauthenticated'
+            })
+        }
+        const user = await this.getUserById({userid: claims.userid})
+        res.send(user);
+    }catch(e){
+        return res.status(401).json({message: "unauthenticated"})
+    }
+    
+}
+
+
+const logoutUsingCookie = (req, res) => {
+    res.cookie('jwt', '', {maxAge: 0})
+    res.json({
+        message: 'success'
+    })
+}
 
 const addUser = (req, res) => {
     var hashedPassword;
@@ -218,6 +254,8 @@ module.exports = {
     getAllUsers,
     getUserById,
     loginByMailPassword,
+    logoutUsingCookie,
+    checkIfLoggedIn,
     addUser,
     updateUser,
     deleteUser,
