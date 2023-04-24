@@ -1,8 +1,8 @@
+const cookieParser = require('cookie-parser');
 require("dotenv").config();
 const express = require('express')
-const cmsRoutes = require("./src/cms/routes")
 const cors = require('cors')
-const cookieParser = require('cookie-parser');
+const cmsRoutes = require("./src/cms/routes")
 const app = express()
 const port = process.env.APP_PORT || 3000
 
@@ -12,12 +12,13 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use('/api/v1/cms', cmsRoutes)
 app.use(cookieParser());
-
+app.use('/api/v1/cms', cmsRoutes)
 
 app.get('/', (req, res)=> {
-    res.send("Hello world");
+    var cmscookie = req.cookies.cmscookie;
+    res.send(cmscookie);
+    
 })
 
 

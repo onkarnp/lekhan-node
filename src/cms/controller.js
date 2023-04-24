@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const { genSaltSync, hashSync,} = require("bcryptjs");
 const jwt = require('jsonwebtoken')
 
+
 const getAllUsers = (req, res) => {
     pool.query(queries.getAllUsers, (error, results) => {
         if(error) throw error;
@@ -28,79 +29,144 @@ const loginByMailPassword = async (req, res) => {
         pool.query(queries.checkEmailExists, [usermail], async (error, results) => {
             if(error){
                 console.log(error);
-                return res.status(400).send({ message : err })
+                return res.status(400).send({       //status code 400 - bad request
+                    success: 0,
+                    message : "Database connection error"
+                })
             }
             if(!results.rows.length ) {
-                return res.json("User with provided mail doesn't exists");
+                return res.status(401).json({       //status code 401 - unauthorized response
+                    success: 0,
+                    message: "User with provided mail doesn't exists"
+                });
             }
                    
             let isMatchPassword = await bcrypt.compare(userpass , results.rows[0].userpass); 
-            console.log(isMatchPassword);
-            if(isMatchPassword){
-                //function to generate token would be here 
-                const token = jwt.sign({userid: results.rows[0].userid}, process.env.TOKEN_KEY, {expiresIn: "24h"});
-                res.cookie('jwt', token, {
-                    maxAge: 24 * 60 * 60 * 1000,
-                    httpOnly:true,
-                    secure:true                    
-                })
-                return res.status(200).json("Logged in successfully");
+            if(isMatchPassword){                
+                jwt.sign({ userid: results.rows[0].userid }, process.env.TOKEN_KEY, {expiresIn: "24h"}, (err, token) => {
+                    if (error) throw err;
+                    res.cookie('cmscookie', token, {
+                        maxAge: 24 * 60 * 60 * 1000,
+                        httpOnly:true,
+                        // secure:true                   
+                    })
+                    
+                    return res.status(200).json({
+                        success: 1,
+                        message: "Logged in successfully",
+                        token: token
+                    }) 
+                });
             }
             else{
-                console.log("wrong password");
-                return res.status(401).json("Couldn't login, please check credentials");
-            }    
+                
+                return res.status(401).json({
+                    success: 0,
+                    message: "Wrong password"       //status code 401 - unauthorized response
+                });
+            }     
         })        
     }
-    catch(error){
-        console.log(error);
+    catch(e){
+        console.log(e);
     }  
 }   
 
 
 const checkIfLoggedIn = async (req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        console.log(cookie);
-        const claims = jwt.verify(cookie, process.env.TOKEN_KEY)
+        const cookie = req.cookies.cmscookie;
+        const claims = jwt.verify(cookie, process.env.TOKEN_KEY);
+        console.log(claims);
         if(!claims){
-            return res.status(401).send({
+            return res.status(401).send({       //status code 401 - unauthorized
+                success: 0,
                 message: 'Unauthenticated'
             })
         }
-        const user = await this.getUserById({userid: claims.userid})
-        res.send(user);
+        try{
+            pool.query(queries.getUserById, [claims.userid], (error, results) => {
+                if(error){
+                    console.log(error);
+                    return res.status(400).json({       //status code 400 - bad request
+                        success: 0,
+                        message : "Database connection error"
+                    })
+                }
+                if(results.rows.length) {
+                    console.log(results.rows);
+                    return res.status(200).json({
+                        success: 1,
+                        message: "Authenticated",
+                        data: results.rows 
+                    })
+                }
+
+            })
+        }
+        catch(e){
+            console.log(e);
+        }
     }catch(e){
-        return res.status(401).json({message: "unauthenticated"})
+        console.log(e);
+        return res.status(401).json({
+            success: 0,
+            message: "unauthenticated1"
+        })
     }
     
 }
 
 
 const logoutUsingCookie = (req, res) => {
-    res.cookie('jwt', '', {maxAge: 0})
-    res.json({
-        message: 'success'
+    res.cookie('cmscookie', '', {maxAge: 0})
+    return res.json({
+        success: 1,
+        message: "Logged out successfully"
     })
 }
 
 const addUser = (req, res) => {
-    var hashedPassword;
     const { username, usermail, userpass, usertypeid=1 } = req.body;
-    //check if email exists
-    pool.query(queries.checkEmailExists, [usermail], (error, results) => {
-        if(results.rows.length) {
-           return res.json("User already registered")
-        }
-        //add user to users table
-        const salt = genSaltSync(10);
-        epass = hashSync(userpass,salt);
-        console.log(epass);
-        pool.query(queries.addUser, [username, usermail, epass, usertypeid], (error, results) => {
-            if(error) throw error;
-           return res.status(201).json("User created successfully");
+    try{
+        //check if email exists
+        pool.query(queries.checkEmailExists, [usermail], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Database connection error"
+                })
+            }
+            if(results.rows.length) {
+                return res.status(409).json({       //status code 409 - conflicts
+                    success: 0,
+                    message: "User already registered"
+                })
+            }
+            //add user to users table
+            const salt = genSaltSync(10);
+            epass = hashSync(userpass,salt);
+            console.log(epass);
+            pool.query(queries.addUser, [username, usermail, epass, usertypeid], (error, results) => {
+                if(error){
+                    console.log(error);
+                    return res.status(400).json({       //status code 400 - bad request
+                        success: 0,
+                        message : "Database connection error"
+                    })
+                }
+                return res.status(201).json({       //status code 201 - created success
+                    success: 1,
+                    message: "Signed up successfully"
+                });
+            })
         })
-    })
+    }
+    catch(e){
+        console.log(e);
+    }
+    
 }
 
 
