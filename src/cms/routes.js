@@ -32,6 +32,8 @@ router.post('/articles', controller.createArticle);
 router.put('/articles/:id', controller.updateArticle);
 // delete article 
 router.delete('/articles/:id', controller.deleteArticleById);
+// To get published articles 
+router.get('/published', controller.getPublishedArticles);
 
 
 // For metadata table

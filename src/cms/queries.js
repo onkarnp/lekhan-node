@@ -13,6 +13,14 @@ const getArticleById = `SELECT * FROM "cmsSchema".contents WHERE contentid = $1`
 const createArticle = `INSERT INTO "cmsSchema".contents(title, description, image) values ($1, $2, $3)`;
 const updateArticle = `UPDATE "cmsSchema".contents SET title=$2, description=$3, image=$4 WHERE contentid=$1`;
 const deleteArticleById = `DELETE FROM "cmsSchema".contents WHERE contentid=$1`;
+// To get all pulished article
+const getPublishedArticles = `SELECT c.contentid, c.title, c.description, c.image, u1.username AS author, u2.username AS assignedqa, u3.username AS assignedcr, To_CHAR(cm.crcheckeddate, 'YYYY-MM-DD') as crcheckeddate 
+FROM "cmsSchema".contents c
+LEFT JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
+LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+WHERE cm.crchecked=true;`
 
 //Queries for metadata
 const getMetadata = `SELECT * FROM "cmsSchema".contentmetadata`;
@@ -35,6 +43,7 @@ module.exports = {
     createArticle,
     updateArticle,
     deleteArticleById,
+    getPublishedArticles,
     getMetadata,
     getMetadataById,
     updateMetadataById,

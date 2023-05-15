@@ -76,8 +76,7 @@ const loginByMailPassword = async (req, res) => {
 const checkIfLoggedIn = async (req, res) => {
     try{
         const cookie = req.cookies.cmscookie;
-        const claims = jwt.verify(cookie, process.env.TOKEN_KEY);
-        console.log(claims);
+        claims = jwt.verify(cookie, process.env.TOKEN_KEY);
         if(!claims){
             return res.status(401).send({       //status code 401 - unauthorized
                 success: 0,
@@ -94,11 +93,16 @@ const checkIfLoggedIn = async (req, res) => {
                     })
                 }
                 if(results.rows.length) {
-                    console.log(results.rows);
+                    const data = {
+                        userid: results.rows[0].userid,
+                        username: results.rows[0].username,
+                        usermail: results.rows[0].usermail,
+                        usertypeid: results.rows[0].usertypeid
+                    }
                     return res.status(200).json({
                         success: 1,
                         message: "Authenticated",
-                        data: results.rows 
+                        data: data 
                     })
                 }
 
@@ -261,6 +265,38 @@ const deleteArticleById = (req, res) => {
 }
 
 
+const getPublishedArticles = (req, res) => {
+    try{
+        pool.query(queries.getPublishedArticles, (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Database connection error"
+                })
+            }
+            if(results.rows.length){
+                if (error) throw error;
+                return res.status(200).json({
+                    success:1,
+                    message: "Published articles fetched successfully",
+                    data: results.rows
+                })
+            }
+            else{
+                return res.status(200).json({
+                    success:0,
+                    message: "No published article found",
+                }) 
+            }
+        })
+    }
+    catch(e){
+        console.log(e);
+    } 
+}
+
+
 const getMetadata = (req, res) => {
     pool.query(queries.getMetadata, (error, results) => {
         if(error) throw error;
@@ -327,6 +363,7 @@ module.exports = {
     deleteUser,
     getArticles,
     getArticleById,
+    getPublishedArticles,
     createArticle,
     updateArticle,
     deleteArticleById,
