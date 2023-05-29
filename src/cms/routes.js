@@ -1,4 +1,5 @@
 const { Router } = require('express')
+const {checkToken} = require("./token_validation");
 const controller = require('./controller')
 const router = Router();
 
@@ -6,45 +7,45 @@ const router = Router();
 // get all users 
 router.get('/users', controller.getAllUsers);
 // get user by id 
-router.get('/users/:id', controller.getUserById);
+router.get('/users/:id', checkToken, controller.getUserById);
 // add new user 
 router.post('/users', controller.addUser);
 // Update user 
-router.put('/users/:id', controller.updateUser);
+router.put('/users/:id', checkToken, controller.updateUser);
 // delete user 
-router.delete('/users/:id', controller.deleteUser);
+router.delete('/users/:id', checkToken, controller.deleteUser);
 // get user by mail and password
 router.post('/login', controller.loginByMailPassword);
 // to check ig logged in already -- using cookie
-router.get('/user', controller.checkIfLoggedIn)
+router.get('/user', checkToken, controller.checkIfLoggedIn)
 // to logout
-router.post('/logout', controller.logoutUsingCookie);
+router.post('/logout', checkToken, controller.logoutUsingCookie);
 
 
 // For articles
 // get all articles 
-router.get('/articles', controller.getArticles);
+router.get('/articles', checkToken, controller.getArticles);
 // get article by id 
 router.get('/articles/:id', controller.getArticleById);
 // create articles 
-router.post('/articles', controller.createArticle);
+router.post('/articles', checkToken, controller.createArticle);
 // Update articles 
-router.put('/articles/:id', controller.updateArticle);
+router.put('/articles/:id', checkToken, controller.updateArticle);
 // delete article 
-router.delete('/articles/:id', controller.deleteArticleById);
+router.delete('/articles/:id', checkToken, controller.deleteArticleById);
 // To get published articles 
 router.get('/published', controller.getPublishedArticles);
 
 
 // For metadata table
 // get all metadata 
-router.get('/metadata', controller.getMetadata);
+router.get('/metadata', checkToken, controller.getMetadata);
 // get article metadata 
-router.get('/metadata/:id', controller.getMetadataById);
+router.get('/metadata/:id', checkToken, controller.getMetadataById);
 // update article metadata -working
-router.put('/metadata/:id', controller.updateMetadataById);
+router.put('/metadata/:id', checkToken, controller.updateMetadataById);
 // delete article metadata -working
-router.delete('/metadata/:id', controller.deleteMetadataById);
+router.delete('/metadata/:id', checkToken, controller.deleteMetadataById);
  
 
 //For usertype table

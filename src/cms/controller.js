@@ -8,6 +8,7 @@ const { genSaltSync, hashSync,} = require("bcryptjs");
 const jwt = require('jsonwebtoken')
 
 
+
 const getAllUsers = (req, res) => {
     pool.query(queries.getAllUsers, (error, results) => {
         if(error) throw error;
@@ -47,7 +48,7 @@ const loginByMailPassword = async (req, res) => {
                     if (error) throw err;
                     res.cookie('cmscookie', token, {
                         maxAge: 24 * 60 * 60 * 1000,
-                        httpOnly:true,
+                        // httpOnly:true,
                         // secure:true                   
                     })
                     
