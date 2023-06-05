@@ -5,7 +5,10 @@ const pool = require('../../db')
 const queries = require('./queries')
 const bcrypt = require('bcryptjs');
 const { genSaltSync, hashSync,} = require("bcryptjs");
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+// const multer = require("multer");
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage });
 
 
 
@@ -298,6 +301,69 @@ const getPublishedArticles = (req, res) => {
 }
 
 
+const saveArticle = (req, res) =>{
+    console.log('req.body', req.body);
+    console.log('req.file', req.file);
+    try{
+        const {title, description, author, status} = req.body;
+        const fileData = req.file.buffer;
+        const imgname = req.file.originalname;
+        const imgdata = new Blob([fileData]);
+        pool.query(queries.saveArticle, [imgname, imgdata, title, description, author, status], (error,results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Database connection error"
+                })
+            }
+            return res.status(200).json({
+                success: 1,
+                message: "Content saved successfully"
+            })
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+    
+    // if(!req.file){
+    //     return res.status(400).json({
+    //         success: 0,
+    //         message: 'No file provided'
+    //     })
+    // }
+    // else{
+    //     return res.status(200).json({
+    //         success: 1,
+    //         message: 'file provided'
+    //     }) 
+    // }
+
+    // try{
+    //     pool.query(queries.saveArticle, [title, description, image, null, author, status], (error, results)=>{
+    //         if(error){
+    //             console.log(error);
+    //             return res.status(400).json({       //status code 400 - bad request
+    //                 success: 0,
+    //                 message : "Bad request"
+    //             })
+    //         }
+    //         return res.status(200).json({
+    //             success:1,
+    //             message: "Content created successfully",
+    //         })
+    //     })
+    // }
+    // catch(e){
+
+    // }
+
+}
+
+
+
+
 const getMetadata = (req, res) => {
     pool.query(queries.getMetadata, (error, results) => {
         if(error) throw error;
@@ -365,6 +431,7 @@ module.exports = {
     getArticles,
     getArticleById,
     getPublishedArticles,
+    saveArticle,
     createArticle,
     updateArticle,
     deleteArticleById,

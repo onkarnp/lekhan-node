@@ -1,7 +1,15 @@
 const { Router } = require('express')
 const {checkToken} = require("./token_validation");
+const multer = require('multer')
 const controller = require('./controller')
 const router = Router();
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 1 * 1024 * 1024,
+    }
+});
 
 // For users
 // get all users 
@@ -35,6 +43,8 @@ router.put('/articles/:id', checkToken, controller.updateArticle);
 router.delete('/articles/:id', checkToken, controller.deleteArticleById);
 // To get published articles 
 router.get('/published', controller.getPublishedArticles);
+// To save content
+router.post('/save', upload.single('file'), controller.saveArticle);
 
 
 // For metadata table

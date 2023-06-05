@@ -22,6 +22,31 @@ LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 WHERE cm.crchecked=true;`
 
+
+// To save article
+const saveArticle = `WITH inserted_image AS (
+    INSERT INTO "cmsSchema".images (imgname, imgdata) VALUES ($1, $2) RETURNING imgid
+), inserted_content AS (
+    INSERT INTO "cmsSchema".contents (title, description, imgid)
+    SELECT $3, $4, imgid FROM inserted_image returning contentid
+)
+INSERT INTO "cmsSchema".contentmetadata (contentid, author, status, submissiondate) 
+SELECT contentid, $5, $6, CURRENT_DATE FROM inserted_content`;
+
+
+// const saveArticle = `WITH inserted_content AS (
+//     INSERT INTO "cmsSchema".contents (title, description, imagid) VALUES ($1, $2,(
+//         INSERT INTO "cmsSchema".images (imgname, imgdata) VALUES ($3, $4)
+//         RETURNING imgid
+//     ))
+//     RETURNING contentid
+// )
+// INSERT INTO "cmsSchema".contentmetadata (contentid, author, status)
+// VALUES (SELECT contentid FROM inserted_content),$5, $6);
+// `
+
+
+
 //Queries for metadata
 const getMetadata = `SELECT * FROM "cmsSchema".contentmetadata`;
 const getMetadataById = `SELECT * FROM "cmsSchema".contentmetadata WHERE contentid=$1`;
@@ -44,6 +69,7 @@ module.exports = {
     updateArticle,
     deleteArticleById,
     getPublishedArticles,
+    saveArticle,
     getMetadata,
     getMetadataById,
     updateMetadataById,
