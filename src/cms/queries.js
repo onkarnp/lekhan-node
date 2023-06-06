@@ -22,30 +22,51 @@ LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 WHERE cm.crchecked=true;`
 
+// To check if content with provided author and title already exists
+const checkIfContentAlreadyExists = `SELECT * FROM "cmsSchema".contents c
+INNER JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
+WHERE c.title = $1 AND cm.author = $2;`
+
+const checkIfContentAlreadyPublished = `SELECT * FROM "cmsSchema".contents c
+INNER JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
+WHERE c.title = $1 AND cm.author = $2 AND cm.status = 'finalized';`
+
+// title description contentid status imgname imgdata
+const overwriteArticle = `
+  WITH updated_content AS (
+    UPDATE "cmsSchema".contents
+    SET title = $1,
+        description = $2
+    WHERE contentid = $3
+    RETURNING contentid, imgid
+  ), updated_contentmetadata AS(
+    UPDATE "cmsSchema".contentmetadata AS cm
+    SET status = $4
+    FROM updated_content AS uc
+    WHERE cm.contentid = uc.contentid
+  )
+  UPDATE "cmsSchema".images AS i
+  SET imgname = $5,
+      imgdata = $6
+  FROM updated_content AS uc
+  WHERE i.imgid = uc.imgid;
+`
+
 
 // To save article
-const saveArticle = `WITH inserted_image AS (
-    INSERT INTO "cmsSchema".images (imgname, imgdata) VALUES ($1, $2) RETURNING imgid
+const saveNewArticle = 
+`WITH inserted_image AS (
+    INSERT INTO "cmsSchema".images (imgname, imgdata) 
+    VALUES ($1, $2) 
+    RETURNING imgid
 ), inserted_content AS (
     INSERT INTO "cmsSchema".contents (title, description, imgid)
-    SELECT $3, $4, imgid FROM inserted_image returning contentid
+    SELECT $3, $4, imgid 
+    FROM inserted_image 
+    RETURNING contentid
 )
 INSERT INTO "cmsSchema".contentmetadata (contentid, author, status, submissiondate) 
-SELECT contentid, $5, $6, CURRENT_DATE FROM inserted_content`;
-
-
-// const saveArticle = `WITH inserted_content AS (
-//     INSERT INTO "cmsSchema".contents (title, description, imagid) VALUES ($1, $2,(
-//         INSERT INTO "cmsSchema".images (imgname, imgdata) VALUES ($3, $4)
-//         RETURNING imgid
-//     ))
-//     RETURNING contentid
-// )
-// INSERT INTO "cmsSchema".contentmetadata (contentid, author, status)
-// VALUES (SELECT contentid FROM inserted_content),$5, $6);
-// `
-
-
+VALUES ((SELECT contentid FROM inserted_content), $5, $6, CURRENT_DATE);`
 
 //Queries for metadata
 const getMetadata = `SELECT * FROM "cmsSchema".contentmetadata`;
@@ -69,7 +90,10 @@ module.exports = {
     updateArticle,
     deleteArticleById,
     getPublishedArticles,
-    saveArticle,
+    checkIfContentAlreadyExists,
+    checkIfContentAlreadyPublished,
+    overwriteArticle,
+    saveNewArticle,
     getMetadata,
     getMetadataById,
     updateMetadataById,

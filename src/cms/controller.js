@@ -301,15 +301,32 @@ const getPublishedArticles = (req, res) => {
 }
 
 
+// const checkIfContentAlreadyExists = (title, author) => {
+//     try{
+//         pool.query(queries.checkIfContentAlreadyExists, [title, author], (error, results) => {
+//             if(results.rows.length){
+//                 if (error) throw error;
+//                 return true;
+//             }
+//             else{
+//                 return false; 
+//             }
+//         })
+//     }
+//     catch(e){
+//         console.log(e);
+//     }
+// }
+
 const saveArticle = (req, res) =>{
-    console.log('req.body', req.body);
-    console.log('req.file', req.file);
+    // console.log('req.body', req.body);
+    // console.log('req.file', req.file);
     try{
         const {title, description, author, status} = req.body;
         const fileData = req.file.buffer;
         const imgname = req.file.originalname;
         const imgdata = new Blob([fileData]);
-        pool.query(queries.saveArticle, [imgname, imgdata, title, description, author, status], (error,results) => {
+        pool.query(queries.checkIfContentAlreadyExists, [title,author], (error, results) => {
             if(error){
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
@@ -317,48 +334,72 @@ const saveArticle = (req, res) =>{
                     message : "Database connection error"
                 })
             }
-            return res.status(200).json({
-                success: 1,
-                message: "Content saved successfully"
-            })
+            console.log('check1');
+            if(results.rows.length) //Content with provided title and author already exists
+            {
+                console.log('check2');
+                const contentidNotPublished = results.rows[0].contentid;
+                //check if it is already published
+                pool.query(queries.checkIfContentAlreadyPublished, [title, author], (error, results) => {
+                    if(error){
+                        console.log(error);
+                        return res.status(400).json({       //status code 400 - bad request
+                            success: 0,
+                            message : "Database connection error"
+                        })
+                    }
+                    if(results.rows.length){
+                        //the content is already published
+                        return res.status(400).json({       //status code 400 - bad request
+                            success: 0,
+                            message : "Content with provided title is already published, try altering the title"
+                        }) 
+                    } 
+                    else{
+                        //overwrite the content
+                        console.log(contentidNotPublished);
+                        // title description contentid status imgname imgdata
+                        pool.query(queries.overwriteArticle, [title, description, contentidNotPublished, status, imgname, imgdata], (error, results) => {
+                            if(error){
+                                console.log(error);
+                                return res.status(400).json({       //status code 400 - bad request
+                                    success: 0,
+                                    message : "Database connection error"
+                                })
+                            }
+                            return res.status(200).json({
+                                success: 1,
+                                message: "Content updated successfully"
+                            })
+                        })
+                        
+                    }
+                })
+                
+            }
+            else{ //Content with provided title and author does not exists
+                console.log('check3');
+                //To save content to database
+                // console.log('sample');
+                pool.query(queries.saveNewArticle, [imgname, imgdata, title, description, author, status], (error,results) => {
+                    if(error){
+                        console.log(error);
+                        return res.status(400).json({       //status code 400 - bad request
+                            success: 0,
+                            message : "Database connection error"
+                        })
+                    }
+                    return res.status(200).json({
+                        success: 1,
+                        message: "Content saved successfully"
+                    })
+                })
+            }
         })
     }
     catch(e){
         console.log(e);
     }
-    
-    // if(!req.file){
-    //     return res.status(400).json({
-    //         success: 0,
-    //         message: 'No file provided'
-    //     })
-    // }
-    // else{
-    //     return res.status(200).json({
-    //         success: 1,
-    //         message: 'file provided'
-    //     }) 
-    // }
-
-    // try{
-    //     pool.query(queries.saveArticle, [title, description, image, null, author, status], (error, results)=>{
-    //         if(error){
-    //             console.log(error);
-    //             return res.status(400).json({       //status code 400 - bad request
-    //                 success: 0,
-    //                 message : "Bad request"
-    //             })
-    //         }
-    //         return res.status(200).json({
-    //             success:1,
-    //             message: "Content created successfully",
-    //         })
-    //     })
-    // }
-    // catch(e){
-
-    // }
-
 }
 
 
@@ -431,6 +472,8 @@ module.exports = {
     getArticles,
     getArticleById,
     getPublishedArticles,
+    // checkIfContentAlreadyExists,
+    // checkIfContentAlreadyPublished,
     saveArticle,
     createArticle,
     updateArticle,
