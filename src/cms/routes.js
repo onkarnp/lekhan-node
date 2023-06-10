@@ -7,17 +7,17 @@ const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 1 * 1024 * 1024,
+        fileSize: 3 * 1024 * 1024,
     }
 });
 
 // For users
 // get all users 
-router.get('/users', controller.getAllUsers);
+router.get('/users', checkToken, controller.getAllUsers);
 // get user by id 
 router.get('/users/:id', checkToken, controller.getUserById);
 // add new user 
-router.post('/users', controller.addUser);
+router.post('/users', checkToken, controller.addUser);
 // Update user 
 router.put('/users/:id', checkToken, controller.updateUser);
 // delete user 
@@ -45,6 +45,10 @@ router.delete('/articles/:id', checkToken, controller.deleteArticleById);
 router.get('/published', controller.getPublishedArticles);
 // To save content
 router.post('/save', upload.single('file'), controller.saveArticle);
+// To publish content
+router.post('/publish',  controller.publishArticle);
+
+
 
 
 // For metadata table

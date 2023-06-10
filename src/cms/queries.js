@@ -14,13 +14,23 @@ const createArticle = `INSERT INTO "cmsSchema".contents(title, description, imag
 const updateArticle = `UPDATE "cmsSchema".contents SET title=$2, description=$3, image=$4 WHERE contentid=$1`;
 const deleteArticleById = `DELETE FROM "cmsSchema".contents WHERE contentid=$1`;
 // To get all pulished article
-const getPublishedArticles = `SELECT c.contentid, c.title, c.description, c.image, u1.username AS author, u2.username AS assignedqa, u3.username AS assignedcr, To_CHAR(cm.crcheckeddate, 'YYYY-MM-DD') as crcheckeddate 
-FROM "cmsSchema".contents c
-LEFT JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
+const getPublishedArticles = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate
+FROM "cmsSchema".contents AS c
+INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
+INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
 LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
 LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
-WHERE cm.crchecked=true;`
+WHERE cm.status = 'finalized';
+`
+
+// const getPublishedArticles = `SELECT c.contentid, c.title, c.description, c.imageid, u1.username AS author, u2.username AS assignedqa, u3.username AS assignedcr, To_CHAR(cm.crcheckeddate, 'YYYY-MM-DD') as crcheckeddate 
+// FROM "cmsSchema".contents c
+// LEFT JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
+// LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+// LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+// LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+// WHERE cm.crchecked=true;`
 
 // To check if content with provided author and title already exists
 const checkIfContentAlreadyExists = `SELECT * FROM "cmsSchema".contents c
@@ -52,12 +62,11 @@ const overwriteArticle = `
   WHERE i.imgid = uc.imgid;
 `
 
-
 // To save article
-const saveNewArticle = 
+const saveNewArticle =
 `WITH inserted_image AS (
     INSERT INTO "cmsSchema".images (imgname, imgdata) 
-    VALUES ($1, $2) 
+    VALUES ($1, $2)
     RETURNING imgid
 ), inserted_content AS (
     INSERT INTO "cmsSchema".contents (title, description, imgid)
@@ -66,7 +75,10 @@ const saveNewArticle =
     RETURNING contentid
 )
 INSERT INTO "cmsSchema".contentmetadata (contentid, author, status, submissiondate) 
-VALUES ((SELECT contentid FROM inserted_content), $5, $6, CURRENT_DATE);`
+VALUES ((SELECT contentid FROM inserted_content), $5, $6, CURRENT_TIMESTAMP);`
+
+const publishArticle = 
+`UPDATE "cmsSchema".contentmetadata SET status = 'finalized' WHERE contentid = (SELECT contentid FROM "cmsSchema".contents WHERE title = $1 AND author = $2 LIMIT 1)`
 
 //Queries for metadata
 const getMetadata = `SELECT * FROM "cmsSchema".contentmetadata`;
@@ -94,6 +106,7 @@ module.exports = {
     checkIfContentAlreadyPublished,
     overwriteArticle,
     saveNewArticle,
+    publishArticle,
     getMetadata,
     getMetadataById,
     updateMetadataById,

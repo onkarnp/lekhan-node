@@ -23,7 +23,7 @@ app.use((err, req, res, next) => {
     if(err instanceof multer.MulterError){
         return res.status(400).json({
             success: 0,
-            message: 'Filesize must be lesser than 1 MB'
+            message: 'Filesize must be lesser than 3 MB'
         });  
     }
     // return res.status(500).json({

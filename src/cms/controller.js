@@ -1,8 +1,11 @@
 const dotenv = require("dotenv");
 dotenv.config({path: './.env'});
+const fs = require('fs');
 const { json } = require('express');
 const pool = require('../../db')
 const queries = require('./queries')
+const Datauri = require('datauri');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const { genSaltSync, hashSync,} = require("bcryptjs");
 const jwt = require('jsonwebtoken');
@@ -10,6 +13,20 @@ const jwt = require('jsonwebtoken');
 // const storage = multer.memoryStorage();
 // const upload = multer({ storage });
 
+
+//To convert filedata to base64 string
+const convertByteaToBase64 = (fileData) =>{
+    const base64Data = Buffer.from(fileData).toString('base64');
+    return 'data:image/png;base64,'+ base64Data;
+}  
+
+//To convert time from postgres to Indian local time
+const convertToIndianTime = (date) =>{
+    const timestamp = new Date(date);
+    const options = { timeZone: 'Asia/Kolkata' };
+    const formattedTimestamp = timestamp.toLocaleString('en-US', options);
+    return formattedTimestamp;
+}
 
 
 const getAllUsers = (req, res) => {
@@ -155,7 +172,7 @@ const addUser = (req, res) => {
             //add user to users table
             const salt = genSaltSync(10);
             epass = hashSync(userpass,salt);
-            console.log(epass);
+            // console.log(epass);
             pool.query(queries.addUser, [username, usermail, epass, usertypeid], (error, results) => {
                 if(error){
                     console.log(error);
@@ -268,7 +285,6 @@ const deleteArticleById = (req, res) => {
     })
 }
 
-
 const getPublishedArticles = (req, res) => {
     try{
         pool.query(queries.getPublishedArticles, (error, results) => {
@@ -281,6 +297,18 @@ const getPublishedArticles = (req, res) => {
             }
             if(results.rows.length){
                 if (error) throw error;
+                
+                // ***************************************
+                
+                results.rows.forEach(row => {
+                    const base64FileData = convertByteaToBase64(row.imgdata);
+                    row.base64FileData = base64FileData;
+                    row.submissiondate = convertToIndianTime(row.submissiondate);
+                });
+
+                // console.log(results.rows);
+
+                // ***********************************
                 return res.status(200).json({
                     success:1,
                     message: "Published articles fetched successfully",
@@ -318,14 +346,14 @@ const getPublishedArticles = (req, res) => {
 //     }
 // }
 
-const saveArticle = (req, res) =>{
+const saveArticle = async (req, res) =>{
     // console.log('req.body', req.body);
     // console.log('req.file', req.file);
     try{
         const {title, description, author, status} = req.body;
-        const fileData = req.file.buffer;
+        const imgdata = req.file.buffer;
         const imgname = req.file.originalname;
-        const imgdata = new Blob([fileData]);
+        // const imgdata = new Blob([fileData]);
         pool.query(queries.checkIfContentAlreadyExists, [title,author], (error, results) => {
             if(error){
                 console.log(error);
@@ -334,10 +362,8 @@ const saveArticle = (req, res) =>{
                     message : "Database connection error"
                 })
             }
-            console.log('check1');
             if(results.rows.length) //Content with provided title and author already exists
             {
-                console.log('check2');
                 const contentidNotPublished = results.rows[0].contentid;
                 //check if it is already published
                 pool.query(queries.checkIfContentAlreadyPublished, [title, author], (error, results) => {
@@ -357,7 +383,7 @@ const saveArticle = (req, res) =>{
                     } 
                     else{
                         //overwrite the content
-                        console.log(contentidNotPublished);
+                        // console.log(contentidNotPublished);
                         // title description contentid status imgname imgdata
                         pool.query(queries.overwriteArticle, [title, description, contentidNotPublished, status, imgname, imgdata], (error, results) => {
                             if(error){
@@ -378,9 +404,7 @@ const saveArticle = (req, res) =>{
                 
             }
             else{ //Content with provided title and author does not exists
-                console.log('check3');
-                //To save content to database
-                // console.log('sample');
+                console.log('sample');
                 pool.query(queries.saveNewArticle, [imgname, imgdata, title, description, author, status], (error,results) => {
                     if(error){
                         console.log(error);
@@ -400,6 +424,24 @@ const saveArticle = (req, res) =>{
     catch(e){
         console.log(e);
     }
+}
+
+
+const publishArticle = (req, res) => {
+    const { title, author } = req.body;
+    pool.query(queries.publishArticle, [title, author], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        return res.status(200).json({
+            success: 1,
+            message: "Content published successfully"
+        })
+    });
 }
 
 
@@ -460,6 +502,14 @@ const getUsertypes = (req, res) => {
     })
 }
 
+
+
+
+
+
+
+
+
 module.exports = {
     getAllUsers,
     getUserById,
@@ -475,6 +525,7 @@ module.exports = {
     // checkIfContentAlreadyExists,
     // checkIfContentAlreadyPublished,
     saveArticle,
+    publishArticle,
     createArticle,
     updateArticle,
     deleteArticleById,
@@ -484,3 +535,24 @@ module.exports = {
     deleteMetadataById,
     getUsertypes
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
