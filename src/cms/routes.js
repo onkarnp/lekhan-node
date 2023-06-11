@@ -47,6 +47,23 @@ router.get('/published', controller.getPublishedArticles);
 router.post('/save', upload.single('file'), controller.saveArticle);
 // To publish content
 router.post('/publish',  controller.publishArticle);
+// To get all articles for an author
+router.get('/all', controller.getAllArticles);
+// To get saved articles for an author
+router.get('/saved', controller.getSavedArticles);
+// To get finalized articles for an author
+router.get('/finalized', controller.getFinalizedArticles);
+// To get QA requested articles for an author
+router.get('/qarequested', controller.getQARequestedArticles);
+// To get QA checked articles for an author
+router.get('/qachecked', controller.getQACheckedArticles);
+// To get CR checked articles for an author
+router.get('/crrequested', controller.getCRRequestedArticles);
+//To get articles published by particular author
+router.get('/user_published', controller.getUserPublishedArticles);
+
+
+
 
 
 

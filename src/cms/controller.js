@@ -297,18 +297,13 @@ const getPublishedArticles = (req, res) => {
             }
             if(results.rows.length){
                 if (error) throw error;
-                
-                // ***************************************
-                
                 results.rows.forEach(row => {
                     const base64FileData = convertByteaToBase64(row.imgdata);
                     row.base64FileData = base64FileData;
                     row.submissiondate = convertToIndianTime(row.submissiondate);
+                    row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                    row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
                 });
-
-                // console.log(results.rows);
-
-                // ***********************************
                 return res.status(200).json({
                     success:1,
                     message: "Published articles fetched successfully",
@@ -444,6 +439,238 @@ const publishArticle = (req, res) => {
     });
 }
 
+const getAllArticles = (req, res) => {
+    const userid = req.query.userid;
+    pool.query(queries.getAllArticles, [userid], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "All articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No article found for provided user",
+            }) 
+        }
+    });
+}
+
+const getSavedArticles = (req, res) => {
+    const userid = req.query.userid;
+    const status = req.query.status;
+    pool.query(queries.getSavedArticles, [userid, status], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "Saved articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No saved article found for provided user",
+            }) 
+        }
+    });
+} 
+
+const getFinalizedArticles = (req, res) => {
+    const userid = req.query.userid;
+    const status = req.query.status;
+    pool.query(queries.getFinalizedArticles, [userid, status], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "Finalized articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No Finalized article found for provided user",
+            }) 
+        }
+    });
+} 
+
+const getQARequestedArticles = (req, res) => {
+    const userid = req.query.userid;
+    pool.query(queries.getQARequestedArticles, [userid], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "QA Requested articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No article is at QA requested stage",
+            }) 
+        }
+    });
+} 
+
+const getQACheckedArticles = (req, res) => {
+    const userid = req.query.userid;
+    pool.query(queries.getQACheckedArticles, [userid], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+                row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "QA Checked articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No article is at QA checked stage",
+            }) 
+        }
+    });
+} 
+
+
+const getCRRequestedArticles = (req, res) => {
+    const userid = req.query.userid;
+    pool.query(queries.getCRRequestedArticles, [userid], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+                row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "CR requested articles fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No article is at CR requested stage",
+            }) 
+        }
+    });
+} 
+
+const getUserPublishedArticles = (req, res) => {
+    const userid = req.query.userid;
+    pool.query(queries.getUserPublishedArticles, [userid], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Database connection error"
+            })
+        }
+        if(results.rows.length){
+            if (error) throw error;
+            results.rows.forEach(row => {
+                const base64FileData = convertByteaToBase64(row.imgdata);
+                row.base64FileData = base64FileData;
+                row.submissiondate = convertToIndianTime(row.submissiondate);
+                row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+            });
+            return res.status(200).json({
+                success:1,
+                message: "Articles published by user fetched successfully",
+                data: results.rows
+            })
+        }
+        else{
+            return res.status(200).json({
+                success:0,
+                message: "No article is published by provided user",
+            }) 
+        }
+    });
+} 
+
 
 
 
@@ -526,6 +753,13 @@ module.exports = {
     // checkIfContentAlreadyPublished,
     saveArticle,
     publishArticle,
+    getAllArticles,
+    getSavedArticles,
+    getFinalizedArticles,
+    getQARequestedArticles,
+    getQACheckedArticles,
+    getCRRequestedArticles,
+    getUserPublishedArticles,
     createArticle,
     updateArticle,
     deleteArticleById,
