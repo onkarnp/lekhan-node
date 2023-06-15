@@ -1,7 +1,7 @@
 // User queries
 const checkEmailExists = `SELECT * FROM "cmsSchema".users WHERE usermail = $1`;
 const checkUserExists = `SELECT * FROM "cmsSchema".users WHERE usermail = $1 and userpass = $2`;
-const getAllUsers = `SELECT * FROM "cmsSchema".users`;
+const getAllUsers = `SELECT * FROM "cmsSchema".users where usertypeid=$1`;
 const addUser = `INSERT INTO "cmsSchema".users(username, usermail, userpass, usertypeid) VALUES ($1, $2, $3, $4)`;
 const getUserById = `SELECT * FROM "cmsSchema".users WHERE userid = $1`;
 const updateUser = 'UPDATE "cmsSchema".users SET username=$2, usermail=$3, userpass=$4, usertypeid=$5 WHERE userid=$1';
@@ -18,6 +18,11 @@ const deleteArticleById = `DELETE FROM "cmsSchema".contents WHERE contentid=$1`;
 const checkIfContentAlreadyExists = `SELECT * FROM "cmsSchema".contents c
 INNER JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
 WHERE c.title = $1 AND cm.author = $2;`
+
+// To check if content with provided id already published
+const checkIfContentidAlreadyPublished = 
+`SELECT * FROM "cmsSchema".contentmetadata
+  WHERE status = 'finalized' AND contentid = $1;`
 
 const checkIfContentAlreadyPublished = `SELECT * FROM "cmsSchema".contents c
 INNER JOIN "cmsSchema".contentmetadata cm ON c.contentid = cm.contentid
@@ -58,6 +63,34 @@ const saveNewArticle =
 )
 INSERT INTO "cmsSchema".contentmetadata (contentid, author, status, submissiondate) 
 VALUES ((SELECT contentid FROM inserted_content), $5, $6, CURRENT_TIMESTAMP);`
+
+//To save edited article with updated file
+const saveEditedArticleWithFile = 
+`WITH updated_content AS (
+  UPDATE "cmsSchema".contents
+  SET title = $1, description = $2
+  WHERE contentid = $3
+  RETURNING imgid
+),
+updated_metadata AS (
+  UPDATE "cmsSchema".contentmetadata
+  SET submissiondate = CURRENT_TIMESTAMP
+  WHERE contentid = $3
+)
+UPDATE "cmsSchema".images
+SET imgname = $4, imgdata = $5
+WHERE imgid = (SELECT imgid FROM updated_content);`
+
+//To save edited article without updated file
+const saveEditedArticleWithoutFile = 
+`UPDATE "cmsSchema".contents
+SET title = $1, description = $2
+WHERE contentid = $3;`
+
+//To publish edited article
+const publishEditedArticle = 
+`UPDATE "cmsSchema".contentmetadata
+SET status = 'finalized', submissiondate = CURRENT_TIMESTAMP WHERE contentid = $1;`
 
 // To publish article
 const publishArticle = 
@@ -151,6 +184,9 @@ WHERE cm.crchecked = true
 order by cm.crcheckeddate desc;
 `
 
+// To assign QA for an article
+const assignQA = `UPDATE "cmsSchema".contentmetadata set assignedqa=$1 where contentid=$2`
+
 //Queries for metadata
 const getMetadata = `SELECT * FROM "cmsSchema".contentmetadata`;
 const getMetadataById = `SELECT * FROM "cmsSchema".contentmetadata WHERE contentid=$1`;
@@ -174,9 +210,13 @@ module.exports = {
     deleteArticleById,
     getPublishedArticles,
     checkIfContentAlreadyExists,
+    checkIfContentidAlreadyPublished,
     checkIfContentAlreadyPublished,
     overwriteArticle,
     saveNewArticle,
+    saveEditedArticleWithFile,
+    saveEditedArticleWithoutFile,
+    publishEditedArticle,
     publishArticle,
     getAllArticles,
     getSavedArticles,
@@ -185,6 +225,7 @@ module.exports = {
     getQACheckedArticles,
     getCRRequestedArticles,
     getUserPublishedArticles,
+    assignQA,
     getMetadata,
     getMetadataById,
     updateMetadataById,

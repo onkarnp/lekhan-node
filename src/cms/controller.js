@@ -9,9 +9,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { genSaltSync, hashSync,} = require("bcryptjs");
 const jwt = require('jsonwebtoken');
-// const multer = require("multer");
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage });
+const { log, error } = require("console");
 
 
 //To convert filedata to base64 string
@@ -30,10 +28,26 @@ const convertToIndianTime = (date) =>{
 
 
 const getAllUsers = (req, res) => {
-    pool.query(queries.getAllUsers, (error, results) => {
-        if(error) throw error;
-        res.status(200).json(results.rows);
-    })
+    const usertypeid = req.query.usertypeid;
+    try{
+        pool.query(queries.getAllUsers, [usertypeid], (error, results) => {
+            if(error) throw error;
+            if(results.rows.length){
+                return res.status(200).send({       //status code 400 - bad request
+                    success: 1,
+                    message : "Users data fetched successfully",
+                    data: results.rows
+                })
+            }
+            return res.status(400).send({       //status code 400 - bad request
+                success: 0,
+                message : "Some error occured"
+            })
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
 }
 
 const getUserById = (req, res) => {
@@ -342,8 +356,6 @@ const getPublishedArticles = (req, res) => {
 // }
 
 const saveArticle = async (req, res) =>{
-    // console.log('req.body', req.body);
-    // console.log('req.file', req.file);
     try{
         const {title, description, author, status} = req.body;
         const imgdata = req.file.buffer;
@@ -399,7 +411,6 @@ const saveArticle = async (req, res) =>{
                 
             }
             else{ //Content with provided title and author does not exists
-                console.log('sample');
                 pool.query(queries.saveNewArticle, [imgname, imgdata, title, description, author, status], (error,results) => {
                     if(error){
                         console.log(error);
@@ -419,6 +430,81 @@ const saveArticle = async (req, res) =>{
     catch(e){
         console.log(e);
     }
+}
+
+const saveEditedArticle = (req, res) => {
+    try{
+        const {contentid, title, description} = req.body;
+        pool.query(queries.checkIfContentidAlreadyPublished, [contentid], (error, results) => {
+            if(results.rows.length){
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Finalized content cannot be modified"
+                })
+            }
+        })
+        if(req.file){
+            const imgdata = req.file.buffer;
+            const imgname = req.file.originalname;
+            pool.query(queries.saveEditedArticleWithFile, [title, description, contentid, imgname, imgdata], (error, results) => {
+                if(error){
+                    console.log(error);
+                    return res.status(400).json({       //status code 400 - bad request
+                        success: 0,
+                        message : "Database connection error"
+                    })
+                }
+                return res.status(200).json({
+                    success: 1,
+                    message: "Edited content saved successfully"
+                })
+            })  
+        }
+        else{
+            pool.query(queries.saveEditedArticleWithoutFile, [title, description, contentid], (error, results) => {
+                if(error){
+                    console.log(error);
+                    return res.status(400).json({       //status code 400 - bad request
+                        success: 0,
+                        message : "Database connection error"
+                    })
+                }
+                return res.status(200).json({
+                    success: 1,
+                    message: "Edited content saved successfully"
+                })
+            })
+        }
+        
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
+const publishEditedArticle = (req, res) => {
+    try{
+        const contentid = req.body.contentid;
+        pool.query(queries.publishEditedArticle, [contentid], (error, results) => {
+            if (error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "An error occured"
+                })
+            }
+            return res.status(200).json({
+                success: 1,
+                message: "Content published successfully"
+            })
+
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+
+    
 }
 
 
@@ -455,6 +541,10 @@ const getAllArticles = (req, res) => {
                 const base64FileData = convertByteaToBase64(row.imgdata);
                 row.base64FileData = base64FileData;
                 row.submissiondate = convertToIndianTime(row.submissiondate);
+                if(row.qacheckeddate)
+                    row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                if(row.crcheckeddate)
+                    row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
             });
             return res.status(200).json({
                 success:1,
@@ -672,6 +762,29 @@ const getUserPublishedArticles = (req, res) => {
 } 
 
 
+const assignQA = (req,res) => {
+    const assignedqa = req.query.assignedqa;
+    const contentid = req.query.contentid;
+    try{
+        pool.query(queries.assignQA, [assignedqa, contentid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Database connection error"
+                })
+            }
+            return res.status(200).json({       //status code 400 - bad request
+                success: 1,
+                message : "QA assigned successfully"
+            })
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
 
 
 const getMetadata = (req, res) => {
@@ -752,6 +865,8 @@ module.exports = {
     // checkIfContentAlreadyExists,
     // checkIfContentAlreadyPublished,
     saveArticle,
+    saveEditedArticle,
+    publishEditedArticle,
     publishArticle,
     getAllArticles,
     getSavedArticles,
@@ -760,6 +875,7 @@ module.exports = {
     getQACheckedArticles,
     getCRRequestedArticles,
     getUserPublishedArticles,
+    assignQA,
     createArticle,
     updateArticle,
     deleteArticleById,
