@@ -25,7 +25,7 @@ router.delete('/users/:id', controller.deleteUser);
 // get user by mail and password
 router.post('/login', controller.loginByMailPassword);
 // to check ig logged in already -- using cookie
-router.get('/user', controller.checkIfLoggedIn)
+router.get('/user', checkToken, controller.checkIfLoggedIn)
 // to logout
 router.post('/logout', controller.logoutUsingCookie);
 
@@ -34,7 +34,7 @@ router.post('/logout', controller.logoutUsingCookie);
 // get all articles 
 router.get('/articles',  controller.getArticles);
 // get article by id 
-router.get('/articles/:id', controller.getArticleById);
+router.get('/articles/:contentid', controller.getArticleByContentid);
 // create articles 
 router.post('/articles',  controller.createArticle);
 // Update articles 
@@ -47,11 +47,10 @@ router.get('/published', controller.getPublishedArticles);
 router.post('/save', upload.single('file'), controller.saveArticle);
 // To save edited content
 router.post('/save_edited', upload.single('file'), controller.saveEditedArticle);
-// To publish edited content
-router.post('/publish_edited', controller.publishEditedArticle);
-
-// To publish content
-router.post('/publish',  controller.publishArticle);
+// To finalize edited content
+router.post('/finalize_edited', controller.finalizeEditedArticle);
+// To finalize content
+router.post('/finalize',  controller.finalizeArticle);
 // To get all articles for an author
 router.get('/all', controller.getAllArticles);
 // To get saved articles for an author
@@ -62,6 +61,8 @@ router.get('/finalized', controller.getFinalizedArticles);
 router.get('/qarequested', controller.getQARequestedArticles);
 // To get QA checked articles for an author
 router.get('/qachecked', controller.getQACheckedArticles);
+// To approve article by QA
+router.put('/qaapprove', controller.approveArticle);
 // To get CR checked articles for an author
 router.get('/crrequested', controller.getCRRequestedArticles);
 //To get articles published by particular author

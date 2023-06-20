@@ -66,7 +66,7 @@ const loginByMailPassword = async (req, res) => {
                 console.log(error);
                 return res.status(400).send({       //status code 400 - bad request
                     success: 0,
-                    message : "Database connection error"
+                    message : "Bad request"
                 })
             }
             if(!results.rows.length ) {
@@ -124,7 +124,7 @@ const checkIfLoggedIn = async (req, res) => {
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
                         success: 0,
-                        message : "Database connection error"
+                        message : "Bad request"
                     })
                 }
                 if(results.rows.length) {
@@ -174,7 +174,7 @@ const addUser = (req, res) => {
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
                     success: 0,
-                    message : "Database connection error"
+                    message : "Bad request"
                 })
             }
             if(results.rows.length) {
@@ -192,7 +192,7 @@ const addUser = (req, res) => {
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
                         success: 0,
-                        message : "Database connection error"
+                        message : "Bad request"
                     })
                 }
                 return res.status(201).json({       //status code 201 - created success
@@ -250,12 +250,48 @@ const getArticles = (req, res) => {
     })
 }
 
-const getArticleById = (req, res) => {
-    const id = parseInt(req.params.id);
-    pool.query(queries.getArticleById, [id], (error, results) => {
-        if(error) throw error;
-        res.status(200).json(results.rows);
-    })
+const getArticleByContentid = (req, res) => {
+    try{
+        const contentid = parseInt(req.params.contentid);
+        pool.query(queries.getArticleByContentid, [contentid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            if(results.rows.length){
+                if (error) throw error;
+                results.rows.forEach(row => {
+                    const base64FileData = convertByteaToBase64(row.imgdata);
+                    row.base64FileData = base64FileData;
+                    if(row.submissiondate)
+                        row.submissiondate = convertToIndianTime(row.submissiondate);
+                    if(row.qacheckeddate)
+                        row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                    if(row.crcheckeddate)
+                        row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+                    if(row.lastediteddate)
+                        row.lastediteddate = convertToIndianTime(row.lastediteddate);
+                });
+                return res.status(200).json({
+                    success:1,
+                    message: "Published articles fetched successfully",
+                    data: results.rows
+                })
+            }
+            else{
+                return res.status(200).json({
+                    success:0,
+                    message: "No published article found",
+                }) 
+            }
+        })
+    }
+    catch(e){
+        console.log(e);
+    } 
 }
 
 const createArticle = (req, res) => {
@@ -270,7 +306,7 @@ const createArticle = (req, res) => {
 const updateArticle = (req, res) => {
     const contentid = parseInt(req.params.id);
     const { title, description, image } = req.body;
-    pool.query(queries.getArticleById, [contentid], (error, results) => {
+    pool.query(queries.getArticleByContentid, [contentid], (error, results) => {
         if(results.rows.length){
             pool.query(queries.updateArticle, [ contentid, title, description, image ], (error, results) => {
                 if (error) throw error;
@@ -286,7 +322,7 @@ const updateArticle = (req, res) => {
 
 const deleteArticleById = (req, res) => {
     const contentid = parseInt(req.params.id);
-    pool.query(queries.getArticleById, [contentid], (error, results) => {
+    pool.query(queries.getArticleByContentid, [contentid], (error, results) => {
         if(results.rows.length){
             pool.query(queries.deleteArticleById, [ contentid ], (error, results) => {
                 if (error) throw error;
@@ -306,7 +342,7 @@ const getPublishedArticles = (req, res) => {
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
                     success: 0,
-                    message : "Database connection error"
+                    message : "Bad request"
                 })
             }
             if(results.rows.length){
@@ -317,6 +353,7 @@ const getPublishedArticles = (req, res) => {
                     row.submissiondate = convertToIndianTime(row.submissiondate);
                     row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
                     row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
                 });
                 return res.status(200).json({
                     success:1,
@@ -366,7 +403,7 @@ const saveArticle = async (req, res) =>{
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
                     success: 0,
-                    message : "Database connection error"
+                    message : "Bad request"
                 })
             }
             if(results.rows.length) //Content with provided title and author already exists
@@ -378,7 +415,7 @@ const saveArticle = async (req, res) =>{
                         console.log(error);
                         return res.status(400).json({       //status code 400 - bad request
                             success: 0,
-                            message : "Database connection error"
+                            message : "Bad request"
                         })
                     }
                     if(results.rows.length){
@@ -392,12 +429,12 @@ const saveArticle = async (req, res) =>{
                         //overwrite the content
                         // console.log(contentidNotPublished);
                         // title description contentid status imgname imgdata
-                        pool.query(queries.overwriteArticle, [title, description, contentidNotPublished, status, imgname, imgdata], (error, results) => {
+                        pool.query(queries.overwriteArticle, [title, description, contentidNotPublished, status, imgname, imgdata, author], (error, results) => {
                             if(error){
                                 console.log(error);
                                 return res.status(400).json({       //status code 400 - bad request
                                     success: 0,
-                                    message : "Database connection error"
+                                    message : "Bad request"
                                 })
                             }
                             return res.status(200).json({
@@ -416,7 +453,7 @@ const saveArticle = async (req, res) =>{
                         console.log(error);
                         return res.status(400).json({       //status code 400 - bad request
                             success: 0,
-                            message : "Database connection error"
+                            message : "Bad request"
                         })
                     }
                     return res.status(200).json({
@@ -432,9 +469,28 @@ const saveArticle = async (req, res) =>{
     }
 }
 
+
+const finalizeArticle = (req, res) => {
+    const { title, author } = req.body;
+    pool.query(queries.finalizeArticle, [title, author], (error, results) => {
+        if(error){
+            console.log(error);
+            return res.status(400).json({       //status code 400 - bad request
+                success: 0,
+                message : "Bad request"
+            })
+        }
+        return res.status(200).json({
+            success: 1,
+            message: "Content published successfully"
+        })
+    });
+}
+
+
 const saveEditedArticle = (req, res) => {
     try{
-        const {contentid, title, description} = req.body;
+        const {contentid, title, description, userid} = req.body;
         pool.query(queries.checkIfContentidAlreadyPublished, [contentid], (error, results) => {
             if(results.rows.length){
                 return res.status(400).json({       //status code 400 - bad request
@@ -446,12 +502,12 @@ const saveEditedArticle = (req, res) => {
         if(req.file){
             const imgdata = req.file.buffer;
             const imgname = req.file.originalname;
-            pool.query(queries.saveEditedArticleWithFile, [title, description, contentid, imgname, imgdata], (error, results) => {
+            pool.query(queries.saveEditedArticleWithFile, [title, description, contentid, imgname, imgdata, userid], (error, results) => {
                 if(error){
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
                         success: 0,
-                        message : "Database connection error"
+                        message : "Bad request"
                     })
                 }
                 return res.status(200).json({
@@ -461,12 +517,12 @@ const saveEditedArticle = (req, res) => {
             })  
         }
         else{
-            pool.query(queries.saveEditedArticleWithoutFile, [title, description, contentid], (error, results) => {
+            pool.query(queries.saveEditedArticleWithoutFile, [title, description, contentid, userid], (error, results) => {
                 if(error){
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
                         success: 0,
-                        message : "Database connection error"
+                        message : "Bad request"
                     })
                 }
                 return res.status(200).json({
@@ -482,10 +538,11 @@ const saveEditedArticle = (req, res) => {
     }
 }
 
-const publishEditedArticle = (req, res) => {
+const finalizeEditedArticle = (req, res) => {
     try{
         const contentid = req.body.contentid;
-        pool.query(queries.publishEditedArticle, [contentid], (error, results) => {
+        const userid = req.body.userid;
+        pool.query(queries.finalizeEditedArticle, [contentid, userid], (error, results) => {
             if (error){
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
@@ -495,7 +552,7 @@ const publishEditedArticle = (req, res) => {
             }
             return res.status(200).json({
                 success: 1,
-                message: "Content published successfully"
+                message: "Content finalized successfully"
             })
 
         })
@@ -508,23 +565,6 @@ const publishEditedArticle = (req, res) => {
 }
 
 
-const publishArticle = (req, res) => {
-    const { title, author } = req.body;
-    pool.query(queries.publishArticle, [title, author], (error, results) => {
-        if(error){
-            console.log(error);
-            return res.status(400).json({       //status code 400 - bad request
-                success: 0,
-                message : "Database connection error"
-            })
-        }
-        return res.status(200).json({
-            success: 1,
-            message: "Content published successfully"
-        })
-    });
-}
-
 const getAllArticles = (req, res) => {
     const userid = req.query.userid;
     pool.query(queries.getAllArticles, [userid], (error, results) => {
@@ -532,7 +572,7 @@ const getAllArticles = (req, res) => {
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -545,6 +585,8 @@ const getAllArticles = (req, res) => {
                     row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
                 if(row.crcheckeddate)
                     row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -569,7 +611,7 @@ const getSavedArticles = (req, res) => {
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -578,6 +620,8 @@ const getSavedArticles = (req, res) => {
                 const base64FileData = convertByteaToBase64(row.imgdata);
                 row.base64FileData = base64FileData;
                 row.submissiondate = convertToIndianTime(row.submissiondate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -597,12 +641,23 @@ const getSavedArticles = (req, res) => {
 const getFinalizedArticles = (req, res) => {
     const userid = req.query.userid;
     const status = req.query.status;
-    pool.query(queries.getFinalizedArticles, [userid, status], (error, results) => {
+    let query;
+    let queryParams;
+    if(userid){
+        query = queries.getFinalizedArticles;
+        queryParams = [userid, status];
+    }
+    else{
+        query = queries.getFinalizedArticlesForQA;
+        queryParams = [status];
+    }
+    
+    pool.query(query, queryParams, (error, results) => {
         if(error){
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -611,6 +666,8 @@ const getFinalizedArticles = (req, res) => {
                 const base64FileData = convertByteaToBase64(row.imgdata);
                 row.base64FileData = base64FileData;
                 row.submissiondate = convertToIndianTime(row.submissiondate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -621,7 +678,7 @@ const getFinalizedArticles = (req, res) => {
         else{
             return res.status(200).json({
                 success:0,
-                message: "No Finalized article found for provided user",
+                message: "No Finalized articles found",
             }) 
         }
     });
@@ -629,12 +686,23 @@ const getFinalizedArticles = (req, res) => {
 
 const getQARequestedArticles = (req, res) => {
     const userid = req.query.userid;
-    pool.query(queries.getQARequestedArticles, [userid], (error, results) => {
+    const qaid = req.query.qaid;
+    let query;
+    let queryParams;
+    if(userid){
+        query = queries.getQARequestedArticles;
+        queryParams = [userid];
+    }
+    if(qaid){
+        query = queries.getQARequestedArticlesForQA;
+        queryParams = [qaid];
+    }
+    pool.query(query, queryParams, (error, results) => {
         if(error){
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -643,6 +711,8 @@ const getQARequestedArticles = (req, res) => {
                 const base64FileData = convertByteaToBase64(row.imgdata);
                 row.base64FileData = base64FileData;
                 row.submissiondate = convertToIndianTime(row.submissiondate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -653,20 +723,32 @@ const getQARequestedArticles = (req, res) => {
         else{
             return res.status(200).json({
                 success:0,
-                message: "No article is at QA requested stage",
+                message: "No requested article found",
             }) 
         }
     });
 } 
 
 const getQACheckedArticles = (req, res) => {
+
     const userid = req.query.userid;
-    pool.query(queries.getQACheckedArticles, [userid], (error, results) => {
+    const qaid = req.query.qaid;
+    let query;
+    let queryParams;
+    if(userid){
+        query = queries.getQACheckedArticles;
+        queryParams = [userid];
+    }
+    if(qaid){
+        query = queries.getQACheckedArticlesForQA;
+        queryParams = [qaid];
+    }
+    pool.query(query, queryParams, (error, results) => {
         if(error){
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -676,6 +758,8 @@ const getQACheckedArticles = (req, res) => {
                 row.base64FileData = base64FileData;
                 row.submissiondate = convertToIndianTime(row.submissiondate);
                 row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -693,6 +777,32 @@ const getQACheckedArticles = (req, res) => {
 } 
 
 
+const approveArticle = (req, res) => {
+    const contentid = req.body.contentid;
+    const qaid = req.body.qaid;
+    try{
+        pool.query(queries.approveArticle, [contentid, qaid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            return res.status(200).json({
+                success: 1,
+                message: "Article has been approved"
+            })
+    
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
+
+
 const getCRRequestedArticles = (req, res) => {
     const userid = req.query.userid;
     pool.query(queries.getCRRequestedArticles, [userid], (error, results) => {
@@ -700,7 +810,7 @@ const getCRRequestedArticles = (req, res) => {
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -711,6 +821,8 @@ const getCRRequestedArticles = (req, res) => {
                 row.submissiondate = convertToIndianTime(row.submissiondate);
                 row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
                 row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -734,7 +846,7 @@ const getUserPublishedArticles = (req, res) => {
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
                 success: 0,
-                message : "Database connection error"
+                message : "Bad request"
             })
         }
         if(results.rows.length){
@@ -745,6 +857,8 @@ const getUserPublishedArticles = (req, res) => {
                 row.submissiondate = convertToIndianTime(row.submissiondate);
                 row.qacheckeddate = convertToIndianTime(row.qacheckeddate);
                 row.crcheckeddate = convertToIndianTime(row.crcheckeddate);
+                if(row.lastediteddate)
+                    row.lastediteddate = convertToIndianTime(row.lastediteddate);
             });
             return res.status(200).json({
                 success:1,
@@ -771,7 +885,7 @@ const assignQA = (req,res) => {
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
                     success: 0,
-                    message : "Database connection error"
+                    message : "Bad request"
                 })
             }
             return res.status(200).json({       //status code 400 - bad request
@@ -860,19 +974,20 @@ module.exports = {
     updateUser,
     deleteUser,
     getArticles,
-    getArticleById,
+    getArticleByContentid,
     getPublishedArticles,
     // checkIfContentAlreadyExists,
     // checkIfContentAlreadyPublished,
     saveArticle,
     saveEditedArticle,
-    publishEditedArticle,
-    publishArticle,
+    finalizeEditedArticle,
+    finalizeArticle,
     getAllArticles,
     getSavedArticles,
     getFinalizedArticles,
     getQARequestedArticles,
     getQACheckedArticles,
+    approveArticle,
     getCRRequestedArticles,
     getUserPublishedArticles,
     assignQA,
