@@ -491,14 +491,17 @@ const finalizeArticle = (req, res) => {
 const saveEditedArticle = (req, res) => {
     try{
         const {contentid, title, description, userid} = req.body;
-        pool.query(queries.checkIfContentidAlreadyPublished, [contentid], (error, results) => {
-            if(results.rows.length){
-                return res.status(400).json({       //status code 400 - bad request
-                    success: 0,
-                    message : "Finalized content cannot be modified"
-                })
-            }
-        })
+        const usertypeid = req.body.usertypeid;
+        if(usertypeid == 1){
+            pool.query(queries.checkIfContentidAlreadyPublished, [contentid], (error, results) => {
+                if(results.rows.length){
+                    return res.status(400).json({       //status code 400 - bad request
+                        success: 0,
+                        message : "Finalized content cannot be modified"
+                    })
+                }
+            })
+        }
         if(req.file){
             const imgdata = req.file.buffer;
             const imgname = req.file.originalname;

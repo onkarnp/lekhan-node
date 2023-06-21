@@ -221,7 +221,7 @@ order by cm.qacheckeddate desc;
 `
 
 // To approve an article by QA
-const approveArticle = `UPDATE "cmsSchema".contentmetadata SET assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
+const approveArticle = `UPDATE "cmsSchema".contentmetadata SET assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP, assignedcr=97, crchecked=true, crcheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
 
 const getCRRequestedArticles = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
 FROM "cmsSchema".contents AS c
