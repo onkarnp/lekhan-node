@@ -490,7 +490,7 @@ const finalizeArticle = (req, res) => {
 
 const saveEditedArticle = (req, res) => {
     try{
-        const {contentid, title, description, userid} = req.body;
+        const {contentid, title, description, userid, status} = req.body;
         const usertypeid = req.body.usertypeid;
         if(usertypeid == 1){
             pool.query(queries.checkIfContentidAlreadyPublished, [contentid], (error, results) => {
@@ -505,7 +505,7 @@ const saveEditedArticle = (req, res) => {
         if(req.file){
             const imgdata = req.file.buffer;
             const imgname = req.file.originalname;
-            pool.query(queries.saveEditedArticleWithFile, [title, description, contentid, imgname, imgdata, userid], (error, results) => {
+            pool.query(queries.saveEditedArticleWithFile, [title, description, contentid, imgname, imgdata, userid, status], (error, results) => {
                 if(error){
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
@@ -520,7 +520,7 @@ const saveEditedArticle = (req, res) => {
             })  
         }
         else{
-            pool.query(queries.saveEditedArticleWithoutFile, [title, description, contentid, userid], (error, results) => {
+            pool.query(queries.saveEditedArticleWithoutFile, [title, description, contentid, userid, status], (error, results) => {
                 if(error){
                     console.log(error);
                     return res.status(400).json({       //status code 400 - bad request
@@ -727,6 +727,48 @@ const getArticlesAtQA = (req, res) => {
 }
 
 
+const getRejectedArticles = (req, res) => {
+    const userid = req.query.userid;
+    try{
+        pool.query(queries.getRejectedArticles, [userid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            if(results.rows.length){
+                if (error) throw error;
+                results.rows.forEach(row => {
+                    const base64FileData = convertByteaToBase64(row.imgdata);
+                    row.base64FileData = base64FileData;
+                    row.submissiondate = convertToIndianTime(row.submissiondate);
+                    if(row.lastediteddate)
+                        row.lastediteddate = convertToIndianTime(row.lastediteddate);
+                });
+                return res.status(200).json({
+                    success:1,
+                    message: "Rejected articles fetched successfully",
+                    data: results.rows
+                })
+            }
+            else{
+                return res.status(200).json({
+                    success:0,
+                    message: "No rejected article found",
+                }) 
+            }
+        });
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
+
+
+
 const getQARequestedArticles = (req, res) => {
     const userid = req.query.userid;
     const qaid = req.query.qaid;
@@ -850,6 +892,32 @@ const approveArticle = (req, res) => {
             return res.status(200).json({
                 success: 1,
                 message: "Article has been approved"
+            })
+    
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
+
+const rejectArticle = (req, res) => {
+    const contentid = req.body.contentid;
+    const userid = req.body.userid;
+    
+    try{
+        pool.query(queries.rejectArticle, [contentid, userid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            return res.status(200).json({
+                success: 1,
+                message: "Article has been rejected"
             })
     
         })
@@ -1080,9 +1148,11 @@ module.exports = {
     getSavedArticles,
     getFinalizedArticles,
     getArticlesAtQA,
+    getRejectedArticles,
     getQARequestedArticles,
     getQACheckedArticles,
     approveArticle,
+    rejectArticle,
     getCRRequestedArticles,
     getUserPublishedArticles,
     assignQA,
