@@ -277,14 +277,14 @@ const getArticleByContentid = (req, res) => {
                 });
                 return res.status(200).json({
                     success:1,
-                    message: "Published articles fetched successfully",
+                    message: "Article fetched successfully",
                     data: results.rows
                 })
             }
             else{
                 return res.status(200).json({
                     success:0,
-                    message: "No published article found",
+                    message: "No article found",
                 }) 
             }
         })
@@ -687,6 +687,46 @@ const getFinalizedArticles = (req, res) => {
     });
 } 
 
+const getArticlesAtQA = (req, res) => {
+    const userid = req.query.userid;
+    try{
+        pool.query(queries.getArticlesAtQA, [userid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            if(results.rows.length){
+                if (error) throw error;
+                results.rows.forEach(row => {
+                    const base64FileData = convertByteaToBase64(row.imgdata);
+                    row.base64FileData = base64FileData;
+                    row.submissiondate = convertToIndianTime(row.submissiondate);
+                    if(row.lastediteddate)
+                        row.lastediteddate = convertToIndianTime(row.lastediteddate);
+                });
+                return res.status(200).json({
+                    success:1,
+                    message: "Articles at QA stage fetched successfully",
+                    data: results.rows
+                })
+            }
+            else{
+                return res.status(200).json({
+                    success:0,
+                    message: "No article found at QA stage",
+                }) 
+            }
+        });
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
+
 const getQARequestedArticles = (req, res) => {
     const userid = req.query.userid;
     const qaid = req.query.qaid;
@@ -746,6 +786,9 @@ const getQACheckedArticles = (req, res) => {
         query = queries.getQACheckedArticlesForQA;
         queryParams = [qaid];
     }
+    else{
+        query = queries.getQACheckedArticlesForCR;
+    }
     pool.query(query, queryParams, (error, results) => {
         if(error){
             console.log(error);
@@ -783,8 +826,20 @@ const getQACheckedArticles = (req, res) => {
 const approveArticle = (req, res) => {
     const contentid = req.body.contentid;
     const qaid = req.body.qaid;
+    const crid = req.body.crid;
+    let query;
+    let queryParams;
+    if(qaid){
+        query = queries.approveArticleByQA;
+        queryParams = [contentid, qaid];
+    }
+    if(crid){
+        query = queries.approveArticleByCR;
+        queryParams = [contentid, crid];
+    }
+
     try{
-        pool.query(queries.approveArticle, [contentid, qaid], (error, results) => {
+        pool.query(query, queryParams, (error, results) => {
             if(error){
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
@@ -808,7 +863,20 @@ const approveArticle = (req, res) => {
 
 const getCRRequestedArticles = (req, res) => {
     const userid = req.query.userid;
-    pool.query(queries.getCRRequestedArticles, [userid], (error, results) => {
+    const crid = req.query.crid;
+    let query;
+    let queryParams;
+    if(userid){
+        query = queries.getCRRequestedArticles;
+        queryParams = [userid];
+    }
+    if(crid){
+        query = queries.getCRRequestedArticlesForCR;
+        queryParams = [crid];
+    }
+
+
+    pool.query(query, queryParams, (error, results) => {
         if(error){
             console.log(error);
             return res.status(400).json({       //status code 400 - bad request
@@ -903,6 +971,29 @@ const assignQA = (req,res) => {
 }
 
 
+const assignCR = (req,res) => {
+    const assignedcr = req.query.assignedcr;
+    const contentid = req.query.contentid;
+    try{
+        pool.query(queries.assignCR, [assignedcr, contentid], (error, results) => {
+            if(error){
+                console.log(error);
+                return res.status(400).json({       //status code 400 - bad request
+                    success: 0,
+                    message : "Bad request"
+                })
+            }
+            return res.status(200).json({       //status code 400 - bad request
+                success: 1,
+                message : "CR assigned successfully"
+            })
+        })
+    }
+    catch(e){
+        console.log(e);
+    }
+}
+
 
 const getMetadata = (req, res) => {
     pool.query(queries.getMetadata, (error, results) => {
@@ -988,12 +1079,14 @@ module.exports = {
     getAllArticles,
     getSavedArticles,
     getFinalizedArticles,
+    getArticlesAtQA,
     getQARequestedArticles,
     getQACheckedArticles,
     approveArticle,
     getCRRequestedArticles,
     getUserPublishedArticles,
     assignQA,
+    assignCR,
     createArticle,
     updateArticle,
     deleteArticleById,

@@ -151,8 +151,23 @@ WHERE cm.author = $1 and cm.status = $2 and cm.assignedqa is null
 order by cm.submissiondate desc;
 `
 
+const getArticlesAtQA = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
+FROM "cmsSchema".contents AS c
+INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
+INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
+LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
+WHERE cm.author = $1 and cm.status = 'finalized' and cm.qachecked = false
+order by cm.submissiondate desc;
+`
+
 // To assign QA for an article
 const assignQA = `UPDATE "cmsSchema".contentmetadata set assignedqa=$1 where contentid=$2`
+
+// To assign CR for an article
+const assignCR = `UPDATE "cmsSchema".contentmetadata set assignedcr=$1 where contentid=$2`
 
 // To get finalizes articles irrespective of author
 const getFinalizedArticlesForQA = 
@@ -216,12 +231,28 @@ LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
 LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
-WHERE cm.assignedqa = $1 and qachecked = true
+WHERE cm.assignedqa = $1 and qachecked = true and crchecked = false
 order by cm.qacheckeddate desc;
 `
 
 // To approve an article by QA
-const approveArticle = `UPDATE "cmsSchema".contentmetadata SET assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP, assignedcr=97, crchecked=true, crcheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
+const approveArticleByQA = `UPDATE "cmsSchema".contentmetadata SET assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
+
+// To approve an article by CR
+const approveArticleByCR = `UPDATE "cmsSchema".contentmetadata SET assignedcr=$2, crchecked=true, crcheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
+
+const getQACheckedArticlesForCR = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
+FROM "cmsSchema".contents AS c
+INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
+INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
+LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
+WHERE qachecked = true and assignedcr is null
+order by cm.qacheckeddate desc;
+`
+
 
 const getCRRequestedArticles = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
 FROM "cmsSchema".contents AS c
@@ -234,6 +265,19 @@ LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
 WHERE cm.author = $1 and cm.assignedcr is NOT NULL and crchecked = false
 order by cm.submissiondate desc;
 `
+
+const getCRRequestedArticlesForCR = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
+FROM "cmsSchema".contents AS c
+INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
+INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
+LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
+WHERE cm.assignedcr=$1 and crchecked = false
+order by cm.qacheckeddate desc;
+`
+
 
 const getUserPublishedArticles = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
 FROM "cmsSchema".contents AS c
@@ -294,15 +338,20 @@ module.exports = {
     getAllArticles,
     getSavedArticles,
     getFinalizedArticles,
+    getArticlesAtQA,
     getFinalizedArticlesForQA,
     getQARequestedArticles,
     getQARequestedArticlesForQA,
     getQACheckedArticles,
     getQACheckedArticlesForQA,
-    approveArticle,
+    approveArticleByQA,
+    approveArticleByCR,
+    getQACheckedArticlesForCR,
     getCRRequestedArticles,
+    getCRRequestedArticlesForCR,
     getUserPublishedArticles,
     assignQA,
+    assignCR,
     getMetadata,
     getMetadataById,
     updateMetadataById,

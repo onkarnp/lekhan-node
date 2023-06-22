@@ -57,18 +57,22 @@ router.get('/all', controller.getAllArticles);
 router.get('/saved', controller.getSavedArticles);
 // To get finalized articles for an author
 router.get('/finalized', controller.getFinalizedArticles);
+// To get articles at QA stage
+router.get('/atqastage', controller.getArticlesAtQA);
 // To get QA requested articles for an author
 router.get('/qarequested', controller.getQARequestedArticles);
 // To get QA checked articles for an author
 router.get('/qachecked', controller.getQACheckedArticles);
-// To approve article by QA
-router.put('/qaapprove', controller.approveArticle);
+// To approve article by QA and CR
+router.put('/approvearticle', controller.approveArticle);
 // To get CR checked articles for an author
 router.get('/crrequested', controller.getCRRequestedArticles);
 //To get articles published by particular author
 router.get('/user_published', controller.getUserPublishedArticles);
 //To assign QA for a content
 router.get('/assignqa', controller.assignQA);
+//To assign CR for a content
+router.get('/assigncr', controller.assignCR);
 
 
 
