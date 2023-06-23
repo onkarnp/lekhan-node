@@ -85,7 +85,7 @@ const saveEditedArticleWithFile =
 ),
 updated_metadata AS (
   UPDATE "cmsSchema".contentmetadata
-  SET lasteditedby = $6, lastediteddate = CURRENT_TIMESTAMP, status = $7
+  SET lasteditedby = $6, lastediteddate = CURRENT_TIMESTAMP, status = $7, rejectedby = null, rejectedremark = null
   WHERE contentid = $3
 )
 UPDATE "cmsSchema".images
@@ -101,7 +101,7 @@ const saveEditedArticleWithoutFile =
   RETURNING imgid
 )
 UPDATE "cmsSchema".contentmetadata 
-SET lasteditedby = $4, lastediteddate = CURRENT_TIMESTAMP, status = $5
+SET lasteditedby = $4, lastediteddate = CURRENT_TIMESTAMP, status = $5, rejectedby = null, rejectedremark = null
 WHERE contentid = $3
 `
 
@@ -163,7 +163,7 @@ WHERE cm.author = $1 and cm.status = 'finalized' and cm.qachecked = false
 order by cm.submissiondate desc;
 `
 
-const getRejectedArticles = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname, cm.rejectedby, u5.username AS rejectedbyname
+const getRejectedArticlesByQA = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname, cm.rejectedby, u5.username AS rejectedbyname, cm.rejectedremark
 FROM "cmsSchema".contents AS c
 INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
 INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
@@ -172,7 +172,20 @@ LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
 LEFT JOIN "cmsSchema".users u5 ON cm.rejectedby = u5.userid
-WHERE cm.author = $1 and cm.status = 'rejected'
+WHERE cm.author = $1 and cm.status = 'qarejected'
+order by cm.submissiondate desc;
+`
+
+const getRejectedArticlesByCR = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname, cm.rejectedby, u5.username AS rejectedbyname, cm.rejectedremark
+FROM "cmsSchema".contents AS c
+INNER JOIN "cmsSchema".images AS i ON c.imgid = i.imgid
+INNER JOIN "cmsSchema".contentmetadata AS cm ON c.contentid = cm.contentid
+LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
+LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
+LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
+LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
+LEFT JOIN "cmsSchema".users u5 ON cm.rejectedby = u5.userid
+WHERE cm.assignedqa = $1 and cm.status = 'crrejected'
 order by cm.submissiondate desc;
 `
 
@@ -205,7 +218,7 @@ LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
 LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
-WHERE cm.author = $1 and cm.assignedqa is NOT NULL and qachecked = false
+WHERE cm.author = $1 and cm.assignedqa is NOT NULL and cm.qachecked = false and cm.status='finalized'
 order by cm.submissiondate desc;
 `
 
@@ -218,7 +231,7 @@ LEFT JOIN "cmsSchema".users u1 ON cm.author = u1.userid
 LEFT JOIN "cmsSchema".users u2 ON cm.assignedqa = u2.userid
 LEFT JOIN "cmsSchema".users u3 ON cm.assignedcr = u3.userid
 LEFT JOIN "cmsSchema".users u4 ON cm.lasteditedby = u4.userid
-WHERE cm.assignedqa = $1 and qachecked = false
+WHERE cm.assignedqa = $1 and cm.qachecked = false and cm.status='finalized'
 order by cm.submissiondate desc;
 `
 
@@ -249,13 +262,17 @@ order by cm.qacheckeddate desc;
 `
 
 // To approve an article by QA
-const approveArticleByQA = `UPDATE "cmsSchema".contentmetadata SET assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
+const approveArticleByQA = `UPDATE "cmsSchema".contentmetadata SET status='finalized', assignedqa=$2, qachecked=true, qacheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
 
 // To approve an article by CR
 const approveArticleByCR = `UPDATE "cmsSchema".contentmetadata SET assignedcr=$2, crchecked=true, crcheckeddate=CURRENT_TIMESTAMP WHERE contentid=$1`
 
-// To reject article by QA and CR
-const rejectArticle = `UPDATE "cmsSchema".contentmetadata SET status='rejected', assignedqa=null, qachecked=false, qacheckeddate=null, assignedcr=null, crchecked=false, crcheckeddate=null, rejectedby=$2 WHERE contentid=$1`
+// To reject article by QA
+const rejectArticleByQA = `UPDATE "cmsSchema".contentmetadata SET status='qarejected', assignedqa=null, qachecked=false, qacheckeddate=null, assignedcr=null, crchecked=false, crcheckeddate=null, rejectedby=$2, rejectedremark=$3 WHERE contentid=$1`
+
+// To reject article by CR
+const rejectArticleByCR = `UPDATE "cmsSchema".contentmetadata SET status='crrejected', qachecked=false, qacheckeddate=null, assignedcr=null, crchecked=false, crcheckeddate=null, rejectedby=$2, rejectedremark=$3 WHERE contentid=$1`
+
 
 const getQACheckedArticlesForCR = `SELECT c.contentid, c.title, c.description, i.imgname, i.imgdata, cm.author, u1.username AS authorname, cm.status, cm.submissiondate, cm.assignedqa, u2.username AS assignedqaname, cm.qachecked, cm.qacheckeddate, cm.assignedcr, u3.username AS assignedcrname, cm.crchecked, cm.crcheckeddate, cm.lasteditedby, cm.lastediteddate, u4.username AS lasteditedbyname
 FROM "cmsSchema".contents AS c
@@ -355,7 +372,8 @@ module.exports = {
     getSavedArticles,
     getFinalizedArticles,
     getArticlesAtQA,
-    getRejectedArticles,
+    getRejectedArticlesByQA,
+    getRejectedArticlesByCR,
     getFinalizedArticlesForQA,
     getQARequestedArticles,
     getQARequestedArticlesForQA,
@@ -363,7 +381,8 @@ module.exports = {
     getQACheckedArticlesForQA,
     approveArticleByQA,
     approveArticleByCR,
-    rejectArticle,
+    rejectArticleByQA,
+    rejectArticleByCR,
     getQACheckedArticlesForCR,
     getCRRequestedArticles,
     getCRRequestedArticlesForCR,

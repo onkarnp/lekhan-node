@@ -729,8 +729,19 @@ const getArticlesAtQA = (req, res) => {
 
 const getRejectedArticles = (req, res) => {
     const userid = req.query.userid;
+    const qaid = req.query.qaid;
+    let query;
+    let queryParams;
+    if(userid){
+        query = queries.getRejectedArticlesByQA;
+        queryParams = [userid];
+    }
+    if(qaid){
+        query = queries.getRejectedArticlesByCR;
+        queryParams = [qaid];
+    }
     try{
-        pool.query(queries.getRejectedArticles, [userid], (error, results) => {
+        pool.query(query, queryParams, (error, results) => {
             if(error){
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
@@ -904,10 +915,23 @@ const approveArticle = (req, res) => {
 
 const rejectArticle = (req, res) => {
     const contentid = req.body.contentid;
-    const userid = req.body.userid;
+    const qaid = req.body.qaid;
+    const crid = req.body.crid;
+    const rejectedRemark = req.body.rejectedRemark;
+
+    let query;
+    let queryParams;
+    if(qaid){
+        query = queries.rejectArticleByQA;
+        queryParams = [contentid, qaid, rejectedRemark];
+    }
+    if(crid){
+        query = queries.rejectArticleByCR;
+        queryParams = [contentid, crid, rejectedRemark];
+    }
     
     try{
-        pool.query(queries.rejectArticle, [contentid, userid], (error, results) => {
+        pool.query(query, queryParams, (error, results) => {
             if(error){
                 console.log(error);
                 return res.status(400).json({       //status code 400 - bad request
