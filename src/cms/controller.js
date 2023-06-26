@@ -12,7 +12,7 @@ const jwt = require('jsonwebtoken');
 const { log, error } = require("console");
 
 
-//To convert filedata to base64 string
+//To convert image filedata to base64 string
 const convertByteaToBase64 = (fileData) =>{
     const base64Data = Buffer.from(fileData).toString('base64');
     return 'data:image/png;base64,'+ base64Data;
