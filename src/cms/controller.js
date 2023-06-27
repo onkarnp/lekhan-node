@@ -12,7 +12,7 @@ const jwt = require('jsonwebtoken');
 const { log, error } = require("console");
 
 
-//To convert filedata to base64 string
+//To convert image filedata to base64 string
 const convertByteaToBase64 = (fileData) =>{
     const base64Data = Buffer.from(fileData).toString('base64');
     return 'data:image/png;base64,'+ base64Data;
@@ -136,7 +136,7 @@ const checkIfLoggedIn = async (req, res) => {
                     }
                     return res.status(200).json({
                         success: 1,
-                        message: "Authenticated",
+                        message: "Logged in Successfully!",
                         data: data 
                     })
                 }
@@ -197,7 +197,7 @@ const addUser = (req, res) => {
                 }
                 return res.status(201).json({       //status code 201 - created success
                     success: 1,
-                    message: "Signed up successfully"
+                    message: "Signed up successfully!"
                 });
             })
         })
