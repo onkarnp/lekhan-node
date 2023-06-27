@@ -136,7 +136,7 @@ const checkIfLoggedIn = async (req, res) => {
                     }
                     return res.status(200).json({
                         success: 1,
-                        message: "Authenticated",
+                        message: "Logged in Successfully!",
                         data: data 
                     })
                 }
@@ -197,7 +197,7 @@ const addUser = (req, res) => {
                 }
                 return res.status(201).json({       //status code 201 - created success
                     success: 1,
-                    message: "Signed up successfully"
+                    message: "Signed up successfully!"
                 });
             })
         })
