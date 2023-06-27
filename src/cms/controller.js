@@ -419,7 +419,7 @@ const saveArticle = async (req, res) =>{
                         })
                     }
                     if(results.rows.length){
-                        //the content is already published
+                        //the content is already published.
                         return res.status(400).json({       //status code 400 - bad request
                             success: 0,
                             message : "Content with provided title is already published, try altering the title"
