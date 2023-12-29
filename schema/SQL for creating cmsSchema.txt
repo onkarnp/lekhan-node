@@ -1,0 +1,61 @@
+-- Set the search path to cmsSchema
+SET search_path TO cmsSchema;
+
+-- Create the userType table
+CREATE TABLE userType (
+    usertypeid INT PRIMARY KEY,
+    type VARCHAR(255) NOT NULL
+);
+
+-- Insert 4 rows into the userType table
+INSERT INTO userType (usertypeid, type) VALUES
+    (1, 'Author'),
+    (2, 'QualityAnalyst'),
+    (3, 'ControlRoom'),
+    (4, 'Admin');
+
+-- Create the Users table with automatically generated userid
+CREATE TABLE Users (
+    userid SERIAL PRIMARY KEY,
+    usermail VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    userpass VARCHAR(255) NOT NULL,
+    usertypeid INT REFERENCES userType(usertypeid) DEFAULT 1 ON DELETE SET NULL,
+    CONSTRAINT fk_users_usertype FOREIGN KEY (usertypeid) REFERENCES userType(usertypeid) ON DELETE SET NULL
+);
+
+-- Create the Images table with automatically generated integer primary key
+CREATE TABLE Images (
+    imgid SERIAL PRIMARY KEY,
+    imgname VARCHAR(255),
+    imgdata BYTEA
+);
+
+-- Create the Content table
+CREATE TABLE Content (
+    contentid SERIAL PRIMARY KEY,
+    title VARCHAR(255),
+    "desc" TEXT,
+    imgid INTEGER REFERENCES Images(imgid) ON DELETE SET NULL,
+    CONSTRAINT fk_content_images FOREIGN KEY (imgid) REFERENCES Images(imgid) ON DELETE SET NULL
+);
+
+-- Create the contentmetadata table
+CREATE TABLE contentmetadata (
+    contentid INTEGER PRIMARY KEY REFERENCES Content(contentid) ON DELETE CASCADE,
+    author INTEGER REFERENCES Users(userid) ON DELETE SET NULL,
+    status VARCHAR(255) NOT NULL,
+    submissiondate DATE,
+    assignedqa INTEGER REFERENCES Users(userid) DEFAULT NULL ON DELETE SET NULL,
+    CONSTRAINT fk_contentmetadata_users_assignedqa FOREIGN KEY (assignedqa) REFERENCES Users(userid) ON DELETE SET NULL,
+    qaChecked BOOLEAN DEFAULT FALSE,
+    qacheckeddate DATE,
+    assignedcr INTEGER REFERENCES Users(userid) DEFAULT NULL ON DELETE SET NULL,
+    CONSTRAINT fk_contentmetadata_users_assignedcr FOREIGN KEY (assignedcr) REFERENCES Users(userid) ON DELETE SET NULL,
+    crchecked BOOLEAN DEFAULT FALSE,
+    crcheckeddate DATE,
+    lasteditedby INTEGER REFERENCES Users(userid) DEFAULT NULL ON DELETE SET NULL,
+    CONSTRAINT fk_contentmetadata_users_lasteditedby FOREIGN KEY (lasteditedby) REFERENCES Users(userid) ON DELETE SET NULL,
+    rejectedby INTEGER REFERENCES Users(userid) DEFAULT NULL ON DELETE SET NULL,
+    rejectedremark VARCHAR(255)
+);
